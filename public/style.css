@@ -1,0 +1,32 @@
+/* style.css */
+
+body {
+    font-family: 'Inter', sans-serif;
+    transition: background-color 0.3s ease;
+  }
+  
+  h1 {
+    text-shadow: 2px 2px 8px rgba(0, 255, 0, 0.6);
+  }
+  
+  #current-song img {
+    transition: transform 0.3s ease;
+  }
+  
+  #current-song img:hover {
+    transform: scale(1.05);
+  }
+  
+  button {
+    transition: all 0.2s ease;
+  }
+  
+  button:active {
+    transform: scale(0.97);
+  }
+  
+  /* Optional: Neon-style glow effect */
+  .glow {
+    box-shadow: 0 0 10px #1db954, 0 0 20px #1db954, 0 0 30px #1db954;
+  }
+  
