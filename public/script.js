@@ -1,91 +1,54 @@
-let accessToken = null;
+const params = new URLSearchParams(window.location.search);
+const accessToken = params.get("access_token");
 
-window.onload = async () => {
-  const hashParams = new URLSearchParams(window.location.search);
-  if (hashParams.get("code")) {
-    // Exchange code for token
-    const code = hashParams.get("code");
-
-    const res = await fetch(`/callback?code=${code}`);
-    const data = await res.json();
-    accessToken = data.access_token;
-
-    document.getElementById("auth-section").classList.add("hidden");
-    document.getElementById("main-section").classList.remove("hidden");
-
-    fetchCurrentSong();
-    fetchQueue();
-  }
-};
-
-async function fetchCurrentSong() {
-  try {
-    const res = await fetch("/currentsong", {
-      headers: { Authorization: accessToken },
-    });
-
-    const data = await res.json();
-    const container = document.getElementById("current-song");
-
-    if (data.item) {
-      const { name, artists, album } = data.item;
-      container.innerHTML = `
-        <p><strong>${name}</strong> by ${artists.map(a => a.name).join(", ")}</p>
-        <img src="${album.images[0].url}" class="w-32 mt-2 rounded" />
-      `;
-    } else {
-      container.textContent = data.message || "No song playing.";
-    }
-  } catch (err) {
-    console.error("Failed to get current song", err);
-  }
+if (accessToken) {
+    console.log("Access Token:", accessToken);
+    // You can now use this token to call your backend endpoints like /currentsong
+} else {
+    console.log("No access token found. Please login first.");
+    // Optionally redirect to login
+    window.location.href = "/login";
 }
 
-async function fetchQueue() {
-  try {
-    const res = await fetch("/currentqueue", {
-      headers: { Authorization: accessToken },
+async function getCurrentSong() {
+    const response = await fetch("/currentsong", {
+        headers: {
+            Authorization: accessToken,
+        },
     });
 
-    const data = await res.json();
-    const list = document.getElementById("queue-list");
-    list.innerHTML = "";
-
-    if (data.queue && data.queue.length > 0) {
-      data.queue.forEach((track) => {
-        const li = document.createElement("li");
-        li.textContent = `${track.name} by ${track.artists.map(a => a.name).join(", ")}`;
-        list.appendChild(li);
-      });
-    } else {
-      list.innerHTML = "<li>No tracks in queue</li>";
-    }
-  } catch (err) {
-    console.error("Failed to get queue", err);
-  }
+    const data = await response.json();
+    console.log("Current Song:", data);
 }
 
-async function addToQueue() {
-  const uri = document.getElementById("track-uri").value;
-  if (!uri) return alert("Please enter a track URI.");
-
-  try {
-    const res = await fetch("/updatequeue", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: accessToken,
-      },
-      body: JSON.stringify({ uri }),
+async function getCurrentQueue() {
+    const response = await fetch("/currentqueue", {
+        headers: {
+            Authorization: accessToken,
+        },
     });
 
-    if (res.ok) {
-      alert("Track added to queue!");
-      fetchQueue();
-    } else {
-      alert("Failed to add track");
-    }
-  } catch (err) {
-    console.error("Failed to add to queue", err);
-  }
+    const data = await response.json();
+    console.log("Current Queue:", data);
 }
+
+async function addToQueue(trackUri) {
+    const response = await fetch("/updatequeue", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: accessToken,
+        },
+        body: JSON.stringify({ uri: trackUri }),
+    });
+
+    const result = await response.text();
+    console.log("Add to Queue Result:", result);
+}
+
+console.log("Current Song info")
+getCurrentSong();
+console.log("Current Queue")
+getCurrentQueue();
+console.log("Add to Queue")
+addToQueue("spotify:track:7ouMYWpwJ422jRcDASZB7P"); // some track URI
