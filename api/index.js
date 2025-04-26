@@ -1,11 +1,8 @@
-import express, { Request, Response } from "express";
-import axios from "axios";
-import querystring from "querystring";
-import dotenv from "dotenv";
-import cors from "cors";
-import { access } from "fs";
-
-console.log("Hello")
+const express = require("express");
+const axios = require("axios");
+const querystring = require("querystring");
+const dotenv = require("dotenv");
+const cors = require("cors");
 
 dotenv.config();
 
@@ -18,37 +15,28 @@ const SPOTIFY_CLIENT_ID = "c7950af8cf894991bdf075c3b7bf7846";
 const SPOTIFY_CLIENT_SECRET = "42370b8d78814caba4156bc508174105";
 const REDIRECT_URI = "http://localhost:3000/callback";
 
-app.get("/login", (req: Request, res: Response) => {
+app.get("/login", (req, res) => {
   const scope =
     "playlist-modify-public playlist-modify-private user-read-playback-state user-modify-playback-state";
-  const authUrl = `https://accounts.spotify.com/authorize?${querystring.stringify(
-    {
-      response_type: "code",
-      client_id: SPOTIFY_CLIENT_ID,
-      scope,
-      redirect_uri: REDIRECT_URI,
-    }
-  )}`;
+  const authUrl = `https://accounts.spotify.com/authorize?${querystring.stringify({
+    response_type: "code",
+    client_id: SPOTIFY_CLIENT_ID,
+    scope,
+    redirect_uri: REDIRECT_URI,
+  })}`;
 
   res.redirect(authUrl);
 });
-interface SpotifyTokenResponse {
-  access_token: string;
-  token_type: string;
-  expires_in: number;
-  refresh_token?: string;
-  scope: string;
-}
 
-app.get("/callback", async (req: Request, res: Response): Promise<void> => {
-  const code = req.query.code as string;
+app.get("/callback", async (req, res) => {
+  const code = req.query.code;
   if (!code) {
     res.status(400).send("Auth code missing");
     return;
   }
 
   try {
-    const tokenResponse = await axios.post<SpotifyTokenResponse>(
+    const tokenResponse = await axios.post(
       "https://accounts.spotify.com/api/token",
       querystring.stringify({
         grant_type: "authorization_code",
@@ -61,15 +49,14 @@ app.get("/callback", async (req: Request, res: Response): Promise<void> => {
     );
 
     const { access_token } = tokenResponse.data;
-
     res.redirect(`/index.html?access_token=${access_token}`);
   } catch (error) {
-    console.error("Error exchanging token:", error);
+    console.error("Error exchanging token:", error.response?.data || error.message);
     res.status(500).send("Failed to authenticate");
   }
 });
 
-app.get("/currentsong", async (req: Request, res: Response): Promise<void> => {
+app.get("/currentsong", async (req, res) => {
   const token = req.headers.authorization;
 
   if (!token) {
@@ -89,13 +76,13 @@ app.get("/currentsong", async (req: Request, res: Response): Promise<void> => {
     }
 
     res.json(response.data);
-  } catch (error: any) {
+  } catch (error) {
     console.error("Current song error:", error.response?.data || error.message);
     res.status(500).send("Failed to get current song");
   }
 });
 
-app.get("/currentqueue", async (req: Request, res: Response): Promise<void> => {
+app.get("/currentqueue", async (req, res) => {
   const token = req.headers.authorization;
 
   if (!token) {
@@ -110,13 +97,15 @@ app.get("/currentqueue", async (req: Request, res: Response): Promise<void> => {
     );
 
     res.json(response.data);
-  } catch (error: any) {
+  } catch (error) {
     console.error("Queue error:", error.response?.data || error.message);
     res.status(500).send("Failed to get queue");
   }
 });
 
-app.get("/song/:song", async (req: Request, res: Response): Promise<void> => {
+app.get("/song/:song", async (req, res) => {
+  const song = req.params.song; // <-- This was missing!
+
   try {
     const authResponse = await axios.post(
       "https://accounts.spotify.com/api/token",
@@ -130,21 +119,43 @@ app.get("/song/:song", async (req: Request, res: Response): Promise<void> => {
         },
       }
     );
-    res.json(authResponse.data); // You were missing this!
-  } catch (error: any) {
+
+    const token = authResponse.data.access_token;
+
+    // Search for the song
+    const searchResponse = await axios.get(
+      `https://api.spotify.com/v1/search?q=${encodeURIComponent(
+        song
+      )}&type=track&limit=1`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+
+    const track = searchResponse.data.tracks.items[0];
+    res.json({
+      title: track.name,
+      artist: track.artists[0].name,
+      albumCover: track.album.images[0].url,
+      uri: track.uri
+    });
+
+
+  } catch (error) {
     console.error("Song fetch error:", error.response?.data || error.message);
     res.status(500).send("Failed to get song info");
   }
 });
 
-app.post("/updatequeue", async (req: Request, res: Response): Promise<void> => {
+app.post("/updatequeue", async (req, res) => {
   const token = req.headers.authorization;
-  const { uri } = req.body as { uri?: string };
+  const { uri } = req.body;
 
   if (!token) {
     res.status(401).send("Missing token");
     return;
   }
+
   if (!uri) {
     res.status(400).send("Missing track URI");
     return;
@@ -161,14 +172,15 @@ app.post("/updatequeue", async (req: Request, res: Response): Promise<void> => {
     );
 
     res.send("Track added to queue");
-  } catch (error: any) {
+  } catch (error) {
     console.error("Update queue error:", error.response?.data || error.message);
     res.status(500).send("Failed to update queue");
   }
 });
 
-/*app.listen(3000, () => {
+app.listen(3000, () => {
   console.log("Listening on Port 3000");
-});*/
+});
 
-export default app;
+
+module.exports = app;
