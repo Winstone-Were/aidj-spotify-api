@@ -41,13 +41,11 @@
 
     <!-- Add Song to Queue -->
     <div class="bg-gray-800 p-4 rounded-lg shadow-lg">
-      <h2 class="text-2xl font-semibold mb-2">Add Song to Queue</h2>
-      <input type="text" id="track-uri" placeholder="spotify:track:xxx"
-        class="w-full px-3 py-2 rounded bg-gray-700 text-white mb-2 focus:outline-none focus:ring-2 focus:ring-green-400" />
-      <button onclick="addToQueue(document.getElementById('track-uri').value)"
-        class="bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded font-bold text-white shadow-md">
-        Add to Queue
-      </button>
+      <h2 class="text-2xl font-semibold mb-2"> Magic </h2>
+      <button onclick="sendtoLLM()"
+       class="bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded font-bold text-white shadow-md">
+        Query LLM
+    </button>
     </div>
   </div>
 </body>

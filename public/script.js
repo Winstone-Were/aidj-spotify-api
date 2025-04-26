@@ -6,6 +6,9 @@ let mainSection = document.getElementById("main-section");
 const currentSongDiv = document.getElementById("current-song");
 const queueList = document.getElementById("queue-list");
 
+let currentSong;
+let currentQueue;
+
 if (accessToken) {
     console.log("Access Token:", accessToken);
     authSection.setAttribute("style", "display:none");
@@ -47,7 +50,8 @@ async function getCurrentSong() {
     });
 
     const data = await response.json();
-    console.log("Current Song:", data);
+    currentSong = data;
+    //console.log("Current Song:", data);
 
     if (data && data.item) {
         const songName = data.item.name;
@@ -77,7 +81,8 @@ async function getCurrentQueue() {
     });
 
     const data = await response.json();
-    console.log("Current Queue:", data.queue);
+    currentQueue = data;
+    //console.log("Current Queue:", data.queue);
 
     queueList.innerHTML = "";
 
@@ -119,10 +124,69 @@ async function addToQueue(trackUri) {
     const result = await response.text();
     console.log("Add to Queue Result:", result);
 }
-
-console.log("Current Song info")
-getCurrentSong();
-console.log("Current Queue")
-getCurrentQueue();
-console.log("Add to Queue")
 //addToQueue("spotify:track:7ouMYWpwJ422jRcDASZB7P"); // some track URI
+
+function Sync(){
+    getCurrentSong();
+    getCurrentQueue();
+}
+
+setInterval(()=>{
+    Sync()
+},3000)
+
+async function sendtoLLM() {
+    if (!currentSong || !currentQueue) {
+        console.error("Current song or queue not loaded yet!");
+        return;
+    }
+
+    const payload = {
+        current_song: currentSong.item?.name || "Unknown Song",
+        current_artist: currentSong.item?.artists.map(artist => artist.name).join(", ") || "Unknown Artist",
+        queue: currentQueue.queue?.map(track => ({
+            song: track.name,
+            artist: track.artists.map(artist => artist.name).join(", ")
+        })) || []
+    };
+
+    console.log("Sending to LLM:", payload);
+
+    try {
+        const response = await fetch("https://abod-llm.vercel.app/spotify", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+        });
+
+        const result = await response.json();
+        let song_uri = getSong(result.song);
+        addToQueue(await song_uri);
+        //console.log("LLM Response:", result);
+    } catch (error) {
+        console.error("Error sending to LLM:", error);
+    }
+}
+
+async function getSong(songname) {
+    console.log("caaled");
+    try {
+      const response = await fetch(`/song/${encodeURIComponent(songname)}`);
+      
+      if (!response.ok) {
+        throw new Error("Failed to fetch song from server");
+      }
+  
+      const uri = await response.json();
+      console.log(uri);
+      return uri; // e.g. "spotify:track:xxxxxx"
+    } catch (error) {
+      console.error("Frontend getSong error:", error);
+      throw error;
+    }
+  }
+
+  
+//getSong("Shape of You");

@@ -133,7 +133,7 @@ app.get("/song/:song", async (req, res) => {
     );
 
     const track = searchResponse.data.tracks.items[0];
-    res.json(track);
+    res.json(track.uri);
 
 
   } catch (error) {
@@ -141,6 +141,45 @@ app.get("/song/:song", async (req, res) => {
     res.status(500).send("Failed to get song info");
   }
 });
+
+app.get("/audio-features/:id", async (req, res) => {
+
+  const id= req.params.id; // <-- This was missing!
+
+  const authResponse = await axios.post(
+    "https://accounts.spotify.com/api/token",
+    "grant_type=client_credentials",
+    {
+      headers: {
+        Authorization: `Basic ${Buffer.from(
+          `${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`
+        ).toString("base64")}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+    }
+  );
+
+  const token = authResponse.data.access_token;
+
+  console.log("token", token);
+  console.log("id", id);
+
+  const featuresResponse = await axios.get(
+    `https://api.spotify.com/v1/audio-features/11dFghVXANMlKmJXsNCbNl`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+
+  const bpm = featuresResponse.data.tempo; // tempo = BPM
+
+  res.json({
+    song: track.name,
+    artist: track.artists.map(a => a.name).join(", "),
+    bpm: bpm,
+  });
+
+})
 
 app.post("/updatequeue", async (req, res) => {
   const token = req.headers.authorization;
