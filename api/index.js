@@ -13,7 +13,7 @@ app.use(express.static("public"));
 
 const SPOTIFY_CLIENT_ID = "c7950af8cf894991bdf075c3b7bf7846";
 const SPOTIFY_CLIENT_SECRET = "42370b8d78814caba4156bc508174105";
-const REDIRECT_URI = "http://localhost:3000/callback";
+const REDIRECT_URI = "https://aidj-spotify-api.onrender.com/callback";
 
 app.get("/login", (req, res) => {
   const scope =
@@ -133,12 +133,7 @@ app.get("/song/:song", async (req, res) => {
     );
 
     const track = searchResponse.data.tracks.items[0];
-    res.json({
-      title: track.name,
-      artist: track.artists[0].name,
-      albumCover: track.album.images[0].url,
-      uri: track.uri
-    });
+    res.json(track);
 
 
   } catch (error) {
